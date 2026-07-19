@@ -1,0 +1,16 @@
+# Applies to builds using the repo root as context (currently: frontend,
+# since its Dockerfile needs to reach docker/nginx.conf - see
+# docker-compose.yml). backend/ has its own .dockerignore since its build
+# context is still ./backend directly.
+**/node_modules
+**/dist
+**/__pycache__
+**/*.pyc
+.git
+.venv
+venv
+*.db
+*.sqlite
+.env
+backend/.pytest_cache
+backend/logs/*.log

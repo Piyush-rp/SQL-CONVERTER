@@ -1,0 +1,30 @@
+# Example dev-mode override - copy to docker-compose.override.yml in the
+# REPO ROOT (not here) and customize. Compose automatically merges
+# docker-compose.yml + docker-compose.override.yml if the override file
+# exists, with no extra flags needed.
+#
+#   cp docker/docker-compose.override.example.yml docker-compose.override.yml
+#   docker compose up --build
+#
+# What this override does differently from the base compose file:
+#   - mounts backend/ and frontend/ source into the containers so code
+#     edits take effect without rebuilding the image
+#   - runs the backend with --reload (uvicorn's autoreload)
+#   - runs the frontend's Vite dev server instead of the built nginx image
+
+version: "3.9"
+
+services:
+  backend:
+    volumes:
+      - ./backend:/app
+    command: ["sh", "-c", "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"]
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev  # would need a separate dev Dockerfile running `npm run dev`, not included by default
+    volumes:
+      - ./frontend/src:/app/src
+    ports:
+      - "5173:5173"

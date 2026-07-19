@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+
+# Env / secrets
+.env
+*.db
+*.sqlite
+
+# Node / frontend
+node_modules/
+dist/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+tsconfig.tsbuildinfo
+backend/logs/*.log
+backend/logs/*.gz
+docker-compose.override.yml

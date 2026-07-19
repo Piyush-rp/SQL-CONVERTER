@@ -1,0 +1,74 @@
+version: "3.9"
+
+services:
+  # Copilot's OWN metadata database: users, saved connections, query history.
+  # This is separate from whatever database(s) users connect Copilot *to*.
+  metadata-db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: copilot
+      POSTGRES_PASSWORD: ${METADATA_DB_PASSWORD:-copilot_dev_password}
+      POSTGRES_DB: copilot_metadata
+    volumes:
+      - metadata-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U copilot -d copilot_metadata"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "5433:5432"  # host:container - exposed for local psql access only
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+    restart: unless-stopped
+    depends_on:
+      metadata-db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      ENVIRONMENT: prod
+      DATABASE_URL: postgresql+psycopg2://copilot:${METADATA_DB_PASSWORD:-copilot_dev_password}@metadata-db:5432/copilot_metadata
+      REDIS_URL: redis://redis:6379/0
+      SECRET_KEY: ${SECRET_KEY:?Set SECRET_KEY in your .env before deploying}
+      DEFAULT_LLM_PROVIDER: ${DEFAULT_LLM_PROVIDER:-openai}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o-mini}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      ANTHROPIC_MODEL: ${ANTHROPIC_MODEL:-claude-sonnet-4-6}
+      ALLOW_WRITE_QUERIES: ${ALLOW_WRITE_QUERIES:-false}
+      SCHEMA_SEARCH_STRATEGY: ${SCHEMA_SEARCH_STRATEGY:-keyword}
+      ENABLE_TOOL_CALLING: ${ENABLE_TOOL_CALLING:-false}
+      CORS_ORIGINS: '["http://localhost:8080"]'
+    ports:
+      - "8000:8000"  # exposed directly too, handy for hitting the API/docs while developing
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "8080:80"
+
+volumes:
+  metadata-db-data:

@@ -1,0 +1,62 @@
+# --- Web framework ---------------------------------------------------------
+fastapi==0.139.0
+uvicorn[standard]==0.51.0
+starlette==1.3.1
+
+# --- Database ---------------------------------------------------------------
+sqlalchemy==2.0.51
+alembic==1.18.5
+psycopg2-binary==2.9.12      # PostgreSQL driver
+pymysql==1.2.0                 # MySQL driver
+pyodbc==5.3.0                  # SQL Server driver (requires the "ODBC Driver 18
+                                # for SQL Server" system package - see docs/setup.md)
+
+# --- Validation / settings ---------------------------------------------------
+pydantic==2.13.4
+pydantic-settings==2.14.2
+python-dotenv==1.2.2
+email-validator==2.3.0
+
+# --- Auth / security ----------------------------------------------------------
+# Note: we call the `bcrypt` library directly rather than via passlib -
+# passlib is unmaintained and its bcrypt backend self-test is broken on
+# bcrypt>=4.1 (see https://github.com/pyca/bcrypt/issues/684).
+bcrypt==5.0.0
+python-jose[cryptography]==3.5.0
+cryptography==49.0.0
+
+# --- LLM / agents (pluggable OpenAI + Anthropic) -----------------------------
+langchain==1.3.13
+langchain-core==1.4.9
+langgraph==1.2.9
+langchain-openai==1.3.5
+langchain-anthropic==1.4.8
+openai==2.45.0
+anthropic==0.116.0
+
+# --- SQL parsing / validation --------------------------------------------------
+sqlglot==30.12.0
+
+# --- Observability ------------------------------------------------------------
+loguru==0.7.3
+prometheus-client==0.25.0
+
+# --- Optional multi-instance scaling (schema cache + rate limiter) ------------
+redis==8.0.1
+
+# --- Optional secrets provider (Vault) ----------------------------------------
+hvac==2.4.0
+
+# --- Schema vector search (app.vectorstore) -----------------------------------
+faiss-cpu==1.14.3
+scikit-learn==1.9.0
+numpy>=1.26,<2.5  # avoid pinning to an exact patch version - newer numpy
+                   # releases sometimes require a newer Python than this
+                   # project targets (2.5.1 specifically requires 3.12+)
+
+# --- HTTP client (used by langchain providers) ---------------------------------
+httpx==0.28.1
+
+# --- Testing --------------------------------------------------------------------
+pytest==9.1.1
+pytest-asyncio==1.4.0
