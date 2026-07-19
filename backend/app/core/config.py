@@ -24,6 +24,8 @@ class Environment(str, Enum):
 class LLMProvider(str, Enum):
     OPENAI = "openai"
     ANTHROPIC = "anthropic"
+    GROQ = "groq"
+
 
 
 class Settings(BaseSettings):
@@ -48,6 +50,8 @@ class Settings(BaseSettings):
     DEFAULT_LLM_PROVIDER: LLMProvider = LLMProvider.OPENAI
     OPENAI_API_KEY: str = ""
     OPENAI_MODEL: str = "gpt-4o-mini"
+    GROQ_API_KEY: str = ""
+    GROQ_MODEL: str = "llama-3.3-70b-versatile"
     ANTHROPIC_API_KEY: str = ""
     ANTHROPIC_MODEL: str = "claude-sonnet-4-6"
     LLM_TEMPERATURE: float = 0.0

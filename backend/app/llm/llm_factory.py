@@ -57,5 +57,17 @@ def get_chat_model(config: LLMConfig) -> Any:
             timeout=config.timeout_seconds,
             max_retries=config.max_retries,
         )
+    if config.provider == LLMProvider.GROQ:
+        if not settings.GROQ_API_KEY:
+            raise LLMProviderError("GROQ_API_KEY is not configured")
+        from langchain_openai import ChatOpenAI
 
+        return ChatOpenAI(
+            model=config.resolved_model(),
+            temperature=config.temperature,
+            api_key=settings.GROQ_API_KEY,
+            base_url="https://api.groq.com/openai/v1",
+            timeout=config.timeout_seconds,
+            max_retries=config.max_retries,
+        )
     raise LLMProviderError(f"Unknown LLM provider: {config.provider}")
