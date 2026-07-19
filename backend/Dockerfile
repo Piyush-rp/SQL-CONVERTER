@@ -13,8 +13,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         gnupg \
         unixodbc-dev \
     && curl -sSL -O https://packages.microsoft.com/config/debian/12/packages-microsoft-prod.deb \
-    && dpkg -i packages-microsoft-prod.deb \
+        && dpkg -i packages-microsoft-prod.deb \
     && rm packages-microsoft-prod.deb \
+    && sed -i 's/\[arch=/[trusted=yes arch=/' /etc/apt/sources.list.d/microsoft-prod.list \
     && apt-get update \
     && ACCEPT_EULA=Y apt-get install -y --no-install-recommends msodbcsql18 \
     && rm -rf /var/lib/apt/lists/*
@@ -32,6 +33,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && curl -sSL -O https://packages.microsoft.com/config/debian/12/packages-microsoft-prod.deb \
     && dpkg -i packages-microsoft-prod.deb \
     && rm packages-microsoft-prod.deb \
+    && sed -i 's/\[arch=/[trusted=yes arch=/' /etc/apt/sources.list.d/microsoft-prod.list \
     && apt-get update \
     && ACCEPT_EULA=Y apt-get install -y --no-install-recommends msodbcsql18 \
     && rm -rf /var/lib/apt/lists/*
