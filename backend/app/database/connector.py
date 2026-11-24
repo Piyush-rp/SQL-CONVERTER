@@ -114,7 +114,20 @@ def build_url(cfg: ConnectionConfig) -> str:
     return build_sqlalchemy_url(cfg).render_as_string(hide_password=False)
 
 
-def _connect_args(cfg: ConnectionConfig) -> Dict:
+def _mysql_ssl_mode(cfg: ConnectionConfig) -> str:
+    """"on" / "off" when the user set it explicitly, else "auto"."""
+    params = {k.lower(): v.lower() for k, v in parse_extra_params(cfg.extra_params).items()}
+    if params.get("ssl_disabled", "") in _TRUE:
+        return "off"
+    value = next((params[k] for k in ("ssl-mode", "ssl_mode", "sslmode", "ssl", "tls") if k in params), "")
+    if value in _FALSE:
+        return "off"
+    if value in _TRUE:
+        return "on"
+    return "auto"
+
+
+def _connect_args(cfg: ConnectionConfig, *, mysql_ssl: bool = True) -> Dict:
     params = {k.lower(): v for k, v in parse_extra_params(cfg.extra_params).items()}
 
     if cfg.engine == DBEngine.SQLITE:
@@ -128,12 +141,11 @@ def _connect_args(cfg: ConnectionConfig) -> Dict:
 
     if cfg.engine == DBEngine.MYSQL:
         args: Dict = {"connect_timeout": CONNECT_TIMEOUT_SECONDS}
-        ssl_value = next((params[k] for k in ("ssl-mode", "ssl_mode", "sslmode", "ssl", "tls") if k in params), "")
-        if ssl_value.lower() in _FALSE or params.get("ssl_disabled", "").lower() in _TRUE:
+        if _mysql_ssl_mode(cfg) == "off" or not mysql_ssl:
             return args
-        # Opportunistic TLS: pymysql only negotiates SSL when the server
-        # advertises it, so this works against both SSL-required cloud
-        # servers (Azure, PlanetScale, Aiven, ...) and plain local servers.
+        # Try TLS first so SSL-required cloud servers (Azure, PlanetScale,
+        # Aiven, ...) work. pymysql REFUSES servers without SSL when ssl is
+        # set, so in "auto" mode DatabaseConnector retries without it.
         args["ssl"] = {"check_hostname": False}
         return args
 
@@ -169,6 +181,8 @@ _ERROR_HINTS: Tuple[Tuple[Tuple[str, ...], str], ...] = (
      "(not just localhost) connections."),
     (("does not exist", "unknown database", "cannot open database"),
      "That database name doesn't exist on the server. Check the Database name field."),
+    (("doesn't support it", "server does not support ssl"),
+     "This server doesn't support SSL. Remove the SSL setting from Extra options (or set ssl=false) and try again."),
     (("ssl", "tls", "encryption", "no pg_hba.conf entry"),
      "The server requires a secure (SSL) connection or rejected this client. Try Extra options: "
      "sslmode=require (PostgreSQL) or ssl=true (MySQL)."),
@@ -208,6 +222,21 @@ class DatabaseConnector:
         return self._engine
 
     def _create_engine(self) -> Engine:
+        engine = self._build_engine(mysql_ssl=True)
+        if self.config.engine == DBEngine.MYSQL and _mysql_ssl_mode(self.config) == "auto":
+            # Probe once: servers without SSL (many public/local MySQL servers)
+            # reject an SSL-enabled client, so fall back to a plain connection.
+            try:
+                with engine.connect():
+                    pass
+            except Exception as exc:
+                if "doesn't support it" in str(exc) or "does not support ssl" in str(exc).lower():
+                    engine.dispose()
+                    engine = self._build_engine(mysql_ssl=False)
+                # any other error is reported by test_connection / the caller
+        return engine
+
+    def _build_engine(self, *, mysql_ssl: bool) -> Engine:
         pool_kwargs = {} if self.config.engine == DBEngine.SQLITE else {
             "pool_size": 5, "max_overflow": 5, "pool_recycle": 1800,
         }
@@ -215,7 +244,7 @@ class DatabaseConnector:
             return create_engine(
                 build_sqlalchemy_url(self.config),
                 pool_pre_ping=True,
-                connect_args=_connect_args(self.config),
+                connect_args=_connect_args(self.config, mysql_ssl=mysql_ssl),
                 # Execution options enforce read-only at the DBAPI/session level
                 # wherever the driver supports it; app-level SQL validation
                 # (see app.validators) is the primary and mandatory gate.
