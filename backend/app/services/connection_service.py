@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 
 from app.core.exceptions import NotFoundError
 from app.database.connection_manager import connection_manager
+from app.database.connector import ConnectionConfig, DatabaseConnector
 from app.database.repository import ConnectionRepository
 from app.models.connection import DatabaseConnection
 from app.schemas import ConnectionCreate
@@ -20,6 +21,27 @@ class ConnectionService:
         self.repo = ConnectionRepository(db)
 
     def create(self, owner_id: str, payload: ConnectionCreate) -> DatabaseConnection:
+        # Test the credentials BEFORE saving, so a failed attempt doesn't leave
+        # a broken connection behind in the user's list. Raises
+        # DatabaseConnectionError with a plain-English cause on failure.
+        probe = DatabaseConnector(
+            ConnectionConfig(
+                engine=payload.engine,
+                host=payload.host,
+                port=payload.port,
+                database=payload.database,
+                username=payload.username,
+                password=payload.password,
+                file_path=payload.file_path,
+                extra_params=payload.extra_params,
+                read_only=payload.read_only,
+            )
+        )
+        try:
+            probe.test_connection()
+        finally:
+            probe.dispose()
+
         connection = DatabaseConnection(
             owner_id=owner_id,
             name=payload.name,

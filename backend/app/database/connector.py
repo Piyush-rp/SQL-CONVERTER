@@ -10,22 +10,24 @@ change scattered through the codebase.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional
+from typing import Dict, Optional, Tuple
+from urllib.parse import parse_qsl
 
 from sqlalchemy import create_engine
-from sqlalchemy.engine import Engine
-from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.engine import URL, Engine
 
 from app.core.exceptions import DatabaseConnectionError
 from app.models.connection import DBEngine
 
-# Driver used per engine. psycopg2/pymysql/pyodbc/sqlite3 are all pure-Python
-# or wheel-distributed, so no OS package installs are required except the
-# SQL Server ODBC driver itself, which is documented in docs/setup.md.
+# Driver used per engine. All of these install from pip wheels with no OS
+# packages, so they work on serverless hosts (e.g. Vercel) as well as Docker.
+# SQL Server uses pymssql (bundles FreeTDS) by default; pyodbc is used only if
+# the connection's extra params name an ODBC driver (driver=...), because
+# pyodbc needs Microsoft's ODBC driver installed on the machine.
 _DIALECT_DRIVER = {
     DBEngine.POSTGRESQL: "postgresql+psycopg2",
     DBEngine.MYSQL: "mysql+pymysql",
-    DBEngine.MSSQL: "mssql+pyodbc",
+    DBEngine.MSSQL: "mssql+pymssql",
     DBEngine.SQLITE: "sqlite",
 }
 
@@ -35,6 +37,10 @@ _DEFAULT_PORT = {
     DBEngine.MSSQL: 1433,
     DBEngine.SQLITE: 0,
 }
+
+# Seconds to wait for a TCP connection/login before giving up, so an
+# unreachable host fails fast with a clear error instead of hanging the request.
+CONNECT_TIMEOUT_SECONDS = 10
 
 
 @dataclass
@@ -53,22 +59,139 @@ class ConnectionConfig:
         return self.port or _DEFAULT_PORT[self.engine]
 
 
-def build_url(cfg: ConnectionConfig) -> str:
+def parse_extra_params(extra: str) -> Dict[str, str]:
+    """Accepts "a=b&c=d", "a=b;c=d", "a=b c=d" or a leading "?" - users paste
+    these in many shapes (copied from connection strings or docs)."""
+    extra = (extra or "").strip().lstrip("?")
+    if not extra:
+        return {}
+    normalized = extra.replace(";", "&").replace(" ", "&").replace(",", "&")
+    return {k.strip(): v.strip() for k, v in parse_qsl(normalized, keep_blank_values=True) if k.strip()}
+
+
+_MYSQL_SSL_KEYS = {"ssl", "ssl-mode", "ssl_mode", "sslmode", "tls", "ssl_disabled"}
+_TRUE = {"1", "true", "yes", "on", "require", "required", "verify_ca", "verify_identity", "verify-ca", "verify-full"}
+_FALSE = {"0", "false", "no", "off", "disable", "disabled"}
+
+
+def _uses_odbc(cfg: ConnectionConfig) -> bool:
+    return cfg.engine == DBEngine.MSSQL and "driver" in {k.lower() for k in parse_extra_params(cfg.extra_params)}
+
+
+def build_sqlalchemy_url(cfg: ConnectionConfig) -> URL:
+    """Builds the URL with SQLAlchemy's URL.create, which escapes the username
+    and password - so passwords containing @ : / # ? % work."""
+    if cfg.engine == DBEngine.SQLITE:
+        return URL.create("sqlite", database=cfg.file_path or cfg.database or ":memory:")
+
+    params = parse_extra_params(cfg.extra_params)
     driver = _DIALECT_DRIVER[cfg.engine]
+    if cfg.engine == DBEngine.MSSQL:
+        if _uses_odbc(cfg):
+            driver = "mssql+pyodbc"
+            params.setdefault("TrustServerCertificate", "yes")
+        else:
+            # pymssql takes its options as connect() kwargs, not URL query params.
+            params = {}
+    elif cfg.engine == DBEngine.MYSQL:
+        # SSL for pymysql is configured via connect_args (see _connect_args).
+        params = {k: v for k, v in params.items() if k.lower() not in _MYSQL_SSL_KEYS}
+
+    return URL.create(
+        driver,
+        username=cfg.username or None,
+        password=cfg.password or None,
+        host=cfg.host or None,
+        port=cfg.port_or_default(),
+        database=cfg.database or None,
+        query=params,
+    )
+
+
+def build_url(cfg: ConnectionConfig) -> str:
+    """String form of the connection URL (password included) - kept for callers
+    that want a plain string; engines are built from build_sqlalchemy_url."""
+    return build_sqlalchemy_url(cfg).render_as_string(hide_password=False)
+
+
+def _connect_args(cfg: ConnectionConfig) -> Dict:
+    params = {k.lower(): v for k, v in parse_extra_params(cfg.extra_params).items()}
 
     if cfg.engine == DBEngine.SQLITE:
-        path = cfg.file_path or cfg.database or ":memory:"
-        return f"sqlite:///{path}"
+        return {"check_same_thread": False}
+
+    if cfg.engine == DBEngine.POSTGRESQL:
+        # libpq's default sslmode=prefer already upgrades to SSL when the
+        # server offers it; users can still force sslmode=require/verify-full
+        # through extra params (passed in the URL query).
+        return {"connect_timeout": CONNECT_TIMEOUT_SECONDS}
+
+    if cfg.engine == DBEngine.MYSQL:
+        args: Dict = {"connect_timeout": CONNECT_TIMEOUT_SECONDS}
+        ssl_value = next((params[k] for k in ("ssl-mode", "ssl_mode", "sslmode", "ssl", "tls") if k in params), "")
+        if ssl_value.lower() in _FALSE or params.get("ssl_disabled", "").lower() in _TRUE:
+            return args
+        # Opportunistic TLS: pymysql only negotiates SSL when the server
+        # advertises it, so this works against both SSL-required cloud
+        # servers (Azure, PlanetScale, Aiven, ...) and plain local servers.
+        args["ssl"] = {"check_hostname": False}
+        return args
 
     if cfg.engine == DBEngine.MSSQL:
-        extra = cfg.extra_params or "driver=ODBC+Driver+18+for+SQL+Server&TrustServerCertificate=yes"
-        return (
-            f"{driver}://{cfg.username}:{cfg.password}@{cfg.host}:{cfg.port_or_default()}"
-            f"/{cfg.database}?{extra}"
-        )
+        if _uses_odbc(cfg):
+            return {"timeout": CONNECT_TIMEOUT_SECONDS}
+        args = {"login_timeout": CONNECT_TIMEOUT_SECONDS}
+        for key in ("tds_version", "appname", "charset"):
+            if key in params:
+                args[key] = params[key]
+        return args
 
-    suffix = f"?{cfg.extra_params}" if cfg.extra_params else ""
-    return f"{driver}://{cfg.username}:{cfg.password}@{cfg.host}:{cfg.port_or_default()}/{cfg.database}{suffix}"
+    return {}
+
+
+# Common driver error fragments -> a plain-English cause and what to do.
+_ERROR_HINTS: Tuple[Tuple[Tuple[str, ...], str], ...] = (
+    (("deny public network access", "not allowed to access the server", "40615", "is not allowed to connect"),
+     "The database server is blocking connections from outside its network. In its firewall/networking "
+     "settings, enable public access and allow all IP addresses (0.0.0.0 - 255.255.255.255), since this app "
+     "has no fixed IP."),
+    (("password authentication failed", "access denied", "login failed", "authentication failed", "18456"),
+     "The username or password is wrong. Check them (no extra spaces) and try again."),
+    (("could not translate host name", "name or service not known", "getaddrinfo failed", "unknown host",
+      "nodename nor servname", "unknown mysql server host", "no such host", "unable to connect: adaptive server is unavailable"),
+     "The host name can't be found or reached. Check the Host field for typos "
+     "(e.g. yourserver.database.windows.net) and that the server is running."),
+    (("timeout", "timed out"),
+     "The server didn't respond in time. Check the host and port, and make sure the database's firewall allows "
+     "connections from anywhere (0.0.0.0/0) - cloud hosts like this app don't have a fixed IP address."),
+    (("connection refused", "actively refused", "10061"),
+     "The server refused the connection. Check the port, and that the database accepts remote "
+     "(not just localhost) connections."),
+    (("does not exist", "unknown database", "cannot open database"),
+     "That database name doesn't exist on the server. Check the Database name field."),
+    (("ssl", "tls", "encryption", "no pg_hba.conf entry"),
+     "The server requires a secure (SSL) connection or rejected this client. Try Extra options: "
+     "sslmode=require (PostgreSQL) or ssl=true (MySQL)."),
+    (("server closed the connection", "lost connection", "connection reset"),
+     "The server closed the connection immediately - it may be paused/sleeping, out of credits, or blocking "
+     "this client. Check that it's running."),
+    (("unable to open database file", "no such file"),
+     "The SQLite file wasn't found at that path on the server."),
+    (("no module named",),
+     "The database driver for this engine isn't installed on the server. Redeploy with the latest requirements."),
+)
+
+
+def explain_connection_error(exc: BaseException) -> str:
+    """Turns a raw driver exception into "what's wrong + what to do", keeping
+    the first line of the original error as details for debugging."""
+    raw = str(getattr(exc, "orig", None) or exc).strip().splitlines()
+    detail = raw[0][:300] if raw else exc.__class__.__name__
+    lowered = " ".join(raw).lower()
+    for needles, hint in _ERROR_HINTS:
+        if any(n in lowered for n in needles):
+            return f"{hint} (Details: {detail})"
+    return f"Could not connect to the database: {detail}"
 
 
 class DatabaseConnector:
@@ -85,37 +208,34 @@ class DatabaseConnector:
         return self._engine
 
     def _create_engine(self) -> Engine:
-        url = build_url(self.config)
-        connect_args = {}
-        if self.config.engine == DBEngine.SQLITE:
-            connect_args = {"check_same_thread": False}
-
+        pool_kwargs = {} if self.config.engine == DBEngine.SQLITE else {
+            "pool_size": 5, "max_overflow": 5, "pool_recycle": 1800,
+        }
         try:
-            engine = create_engine(
-                url,
+            return create_engine(
+                build_sqlalchemy_url(self.config),
                 pool_pre_ping=True,
-                pool_size=5,
-                max_overflow=5,
-                pool_recycle=1800,
-                connect_args=connect_args,
+                connect_args=_connect_args(self.config),
                 # Execution options enforce read-only at the DBAPI/session level
                 # wherever the driver supports it; app-level SQL validation
                 # (see app.validators) is the primary and mandatory gate.
                 execution_options={"postgresql_readonly": self.config.read_only}
                 if self.config.engine == DBEngine.POSTGRESQL
                 else {},
+                **pool_kwargs,
             )
-            return engine
-        except SQLAlchemyError as exc:
-            raise DatabaseConnectionError(f"Failed to build engine: {exc}") from exc
+        except Exception as exc:  # bad URL, missing driver module, etc.
+            raise DatabaseConnectionError(explain_connection_error(exc)) from exc
 
     def test_connection(self) -> bool:
         try:
             with self.engine.connect() as conn:
                 conn.exec_driver_sql("SELECT 1")
             return True
-        except SQLAlchemyError as exc:
-            raise DatabaseConnectionError(f"Could not connect to database: {exc}") from exc
+        except DatabaseConnectionError:
+            raise
+        except Exception as exc:  # driver errors aren't always SQLAlchemyError (OSError, ImportError, ...)
+            raise DatabaseConnectionError(explain_connection_error(exc)) from exc
 
     def dispose(self) -> None:
         if self._engine is not None:

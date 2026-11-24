@@ -9,6 +9,7 @@ alembic==1.18.5
 psycopg2-binary==2.9.12      # PostgreSQL driver
 pymysql==1.2.0                 # MySQL driver
 pyodbc==5.3.0                  # SQL Server driver (requires the "ODBC Driver 18
+pymssql==2.4.6                 # SQL Server driver used by default - pure wheel, no system ODBC driver needed (works on Vercel)
                                 # for SQL Server" system package - see docs/setup.md)
 
 # --- Validation / settings ---------------------------------------------------

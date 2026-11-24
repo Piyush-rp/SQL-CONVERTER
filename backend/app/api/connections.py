@@ -17,9 +17,9 @@ router = APIRouter(prefix="/connections", tags=["Connections"])
 
 @router.post("", response_model=APIResponse[ConnectionOut], status_code=201)
 def create_connection(payload: ConnectionCreate, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
-    service = ConnectionService(db)
-    connection = service.create(user.id, payload)
-    service.test(connection)  # fail fast if credentials are wrong, before returning 201
+    # create() tests the credentials first and only saves on success, so a
+    # bad host/password returns a clear 400 without leaving a broken entry.
+    connection = ConnectionService(db).create(user.id, payload)
     return APIResponse.ok(ConnectionOut.model_validate(connection))
 
 
