@@ -87,8 +87,11 @@ function redirectToLogin() {
   // The session (or the account itself) is gone: send the user to sign in
   // instead of leaving the app half-working with a stale login.
   tokenStorage.clear();
-  if (!window.location.pathname.startsWith("/login") && !window.location.pathname.startsWith("/register")) {
-    window.location.assign("/login");
+  // Go to "/" (a real file on static hosts) - the router then sends the
+  // signed-out user on to the sign-in page. Hard-navigating to "/login" 404s
+  // on hosts without an SPA fallback, such as Vercel's services mode.
+  if (window.location.pathname !== "/login" && window.location.pathname !== "/register") {
+    window.location.assign("/");
   }
 }
 
