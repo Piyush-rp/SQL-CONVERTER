@@ -12,12 +12,14 @@ export function Sidebar({
   onSelect,
   onCreate,
   schema,
+  schemaError,
 }: {
   connections: DatabaseConnection[];
   activeConnectionId: string | null;
   onSelect: (id: string) => void;
   onCreate: (payload: ConnectionCreatePayload) => Promise<void>;
   schema: SchemaInfo | null;
+  schemaError?: string | null;
 }) {
   const [showForm, setShowForm] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -59,7 +61,13 @@ export function Sidebar({
 
       <div className="mt-2 flex-1 overflow-y-auto scrollbar-thin border-t border-ink-800 px-2 py-2">
         <span className="mb-1.5 block px-2 text-[11px] font-medium uppercase tracking-wide text-ink-500">Schema</span>
-        <SchemaBrowser schema={schema} />
+        {schemaError ? (
+          <p className="px-2 py-1 text-xs leading-relaxed text-red-400">
+            Couldn't load the schema: {schemaError}
+          </p>
+        ) : (
+          <SchemaBrowser schema={schema} />
+        )}
       </div>
 
       {showForm && <ConnectionForm onSubmit={handleCreate} onClose={() => setShowForm(false)} isSubmitting={isSubmitting} />}
