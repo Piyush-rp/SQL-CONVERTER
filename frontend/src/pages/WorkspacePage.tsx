@@ -10,6 +10,7 @@ export function WorkspacePage() {
   const [connections, setConnections] = useState<DatabaseConnection[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [schema, setSchema] = useState<SchemaInfo | null>(null);
+  const [schemaError, setSchemaError] = useState<string | null>(null);
 
   const loadConnections = useCallback(async () => {
     const list = await connectionsService.list();
@@ -29,7 +30,14 @@ export function WorkspacePage() {
       setSchema(null);
       return;
     }
-    connectionsService.schema(activeId).then(setSchema).catch(() => setSchema(null));
+    setSchemaError(null);
+    connectionsService
+      .schema(activeId)
+      .then(setSchema)
+      .catch((err) => {
+        setSchema(null);
+        setSchemaError(err instanceof Error ? err.message : "Could not load the schema.");
+      });
   }, [activeId]);
 
   async function handleCreate(payload: ConnectionCreatePayload) {
@@ -48,6 +56,7 @@ export function WorkspacePage() {
         onSelect={setActiveId}
         onCreate={handleCreate}
         schema={schema}
+        schemaError={schemaError}
       />
       <div className="flex flex-1 flex-col">
         <TopBar />
