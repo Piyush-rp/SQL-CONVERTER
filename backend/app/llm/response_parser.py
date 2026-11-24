@@ -35,4 +35,8 @@ class ResponseParser:
         if re.match(r"^(select|with)\b", stripped, re.IGNORECASE):
             return ParsedLLMResponse(sql=stripped, cannot_answer_reason=None, raw_text=raw_text)
 
-        return ParsedLLMResponse(sql=None, cannot_answer_reason="Model did not return a recognizable SQL query", raw_text=raw_text)
+        # Neither SQL nor an explicit CANNOT_ANSWER (e.g. a reasoning model
+        # replied in prose, or returned nothing). Return no SQL and no reason:
+        # the validator then flags it and the workflow retries with a correction,
+        # instead of giving up on the first malformed reply.
+        return ParsedLLMResponse(sql=None, cannot_answer_reason=None, raw_text=raw_text)

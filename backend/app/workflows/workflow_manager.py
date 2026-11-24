@@ -14,6 +14,8 @@ from app.core.exceptions import QueryExecutionError, QueryTimeoutError
 from app.llm.llm_config import LLMConfig
 from app.memory import build_conversation_memory
 from app.models.connection import DatabaseConnection
+from app.database.schema_loader import load_schema
+from app.workflows.schema_questions import answer_structure_question, is_structure_question
 from app.workflows.sql_workflow import build_graph
 from app.workflows.workflow_result import WorkflowResult
 
@@ -49,12 +51,14 @@ class WorkflowManager:
             "session_id": session_id,
         }
 
-        graph = build_graph(connection, memory_backend=self._memory_backend)
-        try:
-            final_state = graph.invoke(initial_state)
-            result = WorkflowResult.from_state(final_state)
-        except (QueryExecutionError, QueryTimeoutError) as exc:
-            result = WorkflowResult(status="failed", question=question, error_message=str(exc), session_id=session_id)
+        result = self._answer_structure_question(question, connection, session_id)
+        if result is None:
+            graph = build_graph(connection, memory_backend=self._memory_backend)
+            try:
+                final_state = graph.invoke(initial_state)
+                result = WorkflowResult.from_state(final_state)
+            except (QueryExecutionError, QueryTimeoutError) as exc:
+                result = WorkflowResult(status="failed", question=question, error_message=str(exc), session_id=session_id)
 
         self._memory_agent.record_turn(
             session_id,
@@ -66,6 +70,30 @@ class WorkflowManager:
         )
 
         return result
+
+    @staticmethod
+    def _answer_structure_question(
+        question: str, connection: DatabaseConnection, session_id: str
+    ) -> Optional[WorkflowResult]:
+        """"Give me the schema" / "columns of X" are answered from the real
+        schema without the LLM. Returns None for ordinary data questions (or if
+        the schema can't be loaded - the normal pipeline then reports why)."""
+        if not is_structure_question(question):
+            return None
+        try:
+            schema = load_schema(connection)
+        except Exception:
+            return None
+        answer = answer_structure_question(question, schema)
+        if answer is None:
+            return None
+        return WorkflowResult(
+            status="success",
+            question=question,
+            explanation=answer["explanation"],
+            execution=answer["execution"],
+            session_id=session_id,
+        )
 
 
 workflow_manager = WorkflowManager()
