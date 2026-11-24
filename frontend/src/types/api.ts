@@ -85,6 +85,29 @@ export interface AskResponse {
   optimization_suggestions: OptimizationSuggestion[];
   retry_count: number;
   error_message: string;
+  session_id?: string | null;
+}
+
+export interface ChatSessionSummary {
+  id: string;
+  title: string;
+  bookmarked: boolean;
+  connection_id: string | null;
+  connection_name: string;
+  message_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ChatSessionMessage {
+  question: string;
+  connection_name: string;
+  response: AskResponse;
+  created_at: string;
+}
+
+export interface ChatSessionDetail extends ChatSessionSummary {
+  messages: ChatSessionMessage[];
 }
 
 export interface QueryHistoryEntry {

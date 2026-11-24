@@ -17,6 +17,8 @@ from app.schemas import AskRequest, AskResponse, QueryHistoryOut
 from app.database.repository import QueryHistoryRepository
 from app.services.connection_service import ConnectionService
 from app.services.query_service import QueryService
+from app.services.session_service import SessionService
+from app.core.logger import log
 
 router = APIRouter(tags=["Query"])
 
@@ -39,22 +41,37 @@ def ask(payload: AskRequest, db: Session = Depends(get_db), user: User = Depends
         session_id=payload.session_id,
     )
 
-    return APIResponse.ok(
-        AskResponse(
-            status=result.status,
-            question=result.question,
-            sql=result.sql,
-            explanation=result.explanation,
-            execution=result.execution,
-            chart_spec=result.chart_spec,
-            optimization_suggestions=[
-                {"severity": s.severity, "message": s.message} for s in result.optimization_suggestions
-            ],
-            retry_count=result.retry_count,
-            error_message=result.error_message,
-            session_id=result.session_id,
-        )
+    response = AskResponse(
+        status=result.status,
+        question=result.question,
+        sql=result.sql,
+        explanation=result.explanation,
+        execution=result.execution,
+        chart_spec=result.chart_spec,
+        optimization_suggestions=[
+            {"severity": s.severity, "message": s.message} for s in result.optimization_suggestions
+        ],
+        retry_count=result.retry_count,
+        error_message=result.error_message,
+        session_id=result.session_id,
     )
+
+    # Save the turn to the user's chat history (the session panel). The saved
+    # session's id is returned so the client keeps adding to the same session.
+    try:
+        saved = SessionService(db).record_turn(
+            owner_id=user.id,
+            session_id=result.session_id,
+            connection=connection,
+            question=payload.question,
+            response=response.model_dump(mode="json"),
+        )
+        response.session_id = saved.id
+    except Exception as exc:  # history is a convenience - never fail the answer over it
+        db.rollback()
+        log.warning(f"Could not save chat history: {exc}")
+
+    return APIResponse.ok(response)
 
 
 @router.get("/history", response_model=APIResponse[List[QueryHistoryOut]])
