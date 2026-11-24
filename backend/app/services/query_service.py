@@ -18,6 +18,7 @@ _STATUS_MAP = {
     "failed": QueryStatus.FAILED,
     "rejected": QueryStatus.REJECTED,
     "clarification_needed": QueryStatus.FAILED,
+    "wrong_database": QueryStatus.FAILED,
 }
 
 

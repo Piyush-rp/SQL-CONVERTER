@@ -1,5 +1,5 @@
-"""Runtime-selectable LLM configuration. A connection (or a single request)
-can pick OpenAI or Anthropic independently of the deployment default."""
+"""Runtime LLM configuration. Groq is the only provider; a request can still
+override the model, temperature, retries or timeout."""
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -17,10 +17,4 @@ class LLMConfig:
     timeout_seconds: int = settings.LLM_REQUEST_TIMEOUT_SECONDS
 
     def resolved_model(self) -> str:
-        if self.model:
-            return self.model
-        if self.provider == LLMProvider.OPENAI:
-            return settings.OPENAI_MODEL
-        if self.provider == LLMProvider.GROQ:
-            return settings.GROQ_MODEL
-        return settings.ANTHROPIC_MODEL
+        return self.model or settings.GROQ_MODEL

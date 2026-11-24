@@ -34,6 +34,7 @@ class WorkflowState(TypedDict, total=False):
     # --- inputs ---
     question: str
     connection_id: str
+    connection_name: str
     engine_name: str
     allow_write: bool
     llm_config: LLMConfig

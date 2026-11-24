@@ -9,9 +9,26 @@ from typing import Any, List, Optional
 from app.agents.state import ChartSpec, ExecutionResult, WorkflowState
 
 
+def _wrong_database_message(state: WorkflowState, reason: str) -> str:
+    """Tells the user the question belongs to a different database: names the
+    selected connection, says what it actually contains, and what to do."""
+    # The model's own note is not shown: it only sees the few tables picked as
+    # relevant to the question, so it can wrongly claim the database "only
+    # contains" those. The real table list below comes from the full schema.
+    name = state.get("connection_name") or "the selected database"
+    schema = state.get("full_schema")
+    tables = schema.table_names()[:8] if schema is not None else []
+    parts = [f'This question doesn\'t seem to match the selected database "{name}".']
+    if tables:
+        more = " and more" if schema is not None and len(schema.tables) > len(tables) else ""
+        parts.append(f"It contains tables like: {', '.join(tables)}{more}.")
+    parts.append("Select the right connection in the sidebar (or type / and its name), then ask again.")
+    return " ".join(parts)
+
+
 @dataclass
 class WorkflowResult:
-    status: str  # "success" | "failed" | "rejected" | "clarification_needed"
+    status: str  # "success" | "failed" | "rejected" | "clarification_needed" | "wrong_database"
     question: str
     sql: Optional[str] = None
     explanation: str = ""
@@ -25,10 +42,19 @@ class WorkflowResult:
     @classmethod
     def from_state(cls, state: WorkflowState) -> "WorkflowResult":
         if state.get("cannot_answer_reason"):
+            reason = state["cannot_answer_reason"]
+            if reason.upper().startswith("WRONG_DATABASE"):
+                return cls(
+                    status="wrong_database",
+                    question=state["question"],
+                    error_message=_wrong_database_message(state, reason),
+                    retry_count=state.get("retry_count", 0),
+                    session_id=state.get("session_id", ""),
+                )
             return cls(
                 status="clarification_needed",
                 question=state["question"],
-                error_message=state["cannot_answer_reason"],
+                error_message=reason,
                 retry_count=state.get("retry_count", 0),
                 session_id=state.get("session_id", ""),
             )

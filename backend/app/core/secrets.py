@@ -1,6 +1,6 @@
 """
 Pluggable secrets provider: environment variables (default) or HashiCorp
-Vault. This exists so SECRET_KEY / OPENAI_API_KEY / ANTHROPIC_API_KEY can
+Vault. This exists so SECRET_KEY / GROQ_API_KEY can
 live in a real secrets manager instead of a .env file, for deployments
 that require it (see docs/roadmap.md item 3) - without changing how
 anything else in the app reads `settings.*`.
@@ -37,7 +37,7 @@ class EnvSecretsProvider:
 class VaultSecretsProvider:
     """Reads from Vault's KV v2 secrets engine, at a single path holding
     all of this app's secrets as a flat key-value map (e.g. a `vault kv put
-    secret/sqlcopilot SECRET_KEY=... OPENAI_API_KEY=...`). Fails safe: any
+    secret/sqlcopilot SECRET_KEY=... GROQ_API_KEY=...`). Fails safe: any
     error talking to Vault falls back to the caller-supplied default rather
     than crashing startup, since a misconfigured/unreachable Vault
     shouldn't take down the whole app if env vars also happen to be set as

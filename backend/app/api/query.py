@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.core.config import LLMProvider
+from app.core.exceptions import ValidationAppError
 from app.core.responses import APIResponse
 from app.database.session import get_db
 from app.dependencies import enforce_rate_limit, get_current_user
@@ -26,7 +27,12 @@ def ask(payload: AskRequest, db: Session = Depends(get_db), user: User = Depends
 
     llm_config = None
     if payload.llm_provider:
-        llm_config = LLMConfig(provider=LLMProvider(payload.llm_provider))
+        try:
+            llm_config = LLMConfig(provider=LLMProvider(payload.llm_provider))
+        except ValueError:
+            raise ValidationAppError(
+                f"Unsupported llm_provider '{payload.llm_provider}' - the only provider is 'groq'."
+            )
 
     result = QueryService(db).ask(
         user_id=user.id, connection=connection, question=payload.question, llm_config=llm_config,

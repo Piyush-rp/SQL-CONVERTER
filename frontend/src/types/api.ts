@@ -73,7 +73,7 @@ export interface OptimizationSuggestion {
   message: string;
 }
 
-export type AskStatus = "success" | "failed" | "rejected" | "clarification_needed";
+export type AskStatus = "success" | "failed" | "rejected" | "clarification_needed" | "wrong_database";
 
 export interface AskResponse {
   status: AskStatus;

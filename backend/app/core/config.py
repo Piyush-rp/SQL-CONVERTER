@@ -22,8 +22,6 @@ class Environment(str, Enum):
 
 
 class LLMProvider(str, Enum):
-    OPENAI = "openai"
-    ANTHROPIC = "anthropic"
     GROQ = "groq"
 
 
@@ -46,14 +44,10 @@ class Settings(BaseSettings):
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
     JWT_ALGORITHM: str = "HS256"
 
-    # --- LLM providers (pluggable) -------------------------------------------
-    DEFAULT_LLM_PROVIDER: LLMProvider = LLMProvider.OPENAI
-    OPENAI_API_KEY: str = ""
-    OPENAI_MODEL: str = "gpt-4o-mini"
+    # --- LLM provider (Groq) ---------------------------------------------------
+    DEFAULT_LLM_PROVIDER: LLMProvider = LLMProvider.GROQ
     GROQ_API_KEY: str = ""
-    GROQ_MODEL: str = "llama-3.3-70b-versatile"
-    ANTHROPIC_API_KEY: str = ""
-    ANTHROPIC_MODEL: str = "claude-sonnet-4-6"
+    GROQ_MODEL: str = "openai/gpt-oss-120b"
     LLM_TEMPERATURE: float = 0.0
     LLM_MAX_RETRIES: int = 2
     LLM_REQUEST_TIMEOUT_SECONDS: int = 30
@@ -79,8 +73,8 @@ class Settings(BaseSettings):
     # --- Agentic tool-calling generation (app.tools) ---------------------------
     # When enabled, SQL generation binds schema-lookup/validate/exploratory-
     # query tools to the model and runs a bounded tool-call loop instead of
-    # a single-shot prompt. Requires a tool-calling-capable model (both
-    # OpenAI and Anthropic's current chat models qualify). Off by default -
+    # a single-shot prompt. Requires a tool-calling-capable Groq model
+    # (e.g. openai/gpt-oss-120b). Off by default -
     # it's a real quality upgrade on complex/ambiguous questions but costs
     # extra round-trips, so it's opt-in rather than forced on every request.
     ENABLE_TOOL_CALLING: bool = False
@@ -95,7 +89,7 @@ class Settings(BaseSettings):
     REDIS_URL: str = ""
 
     # --- Secrets provider (optional) -------------------------------------------
-    # "env" (default) reads SECRET_KEY/OPENAI_API_KEY/ANTHROPIC_API_KEY from
+    # "env" (default) reads SECRET_KEY/GROQ_API_KEY from
     # environment variables/.env, same as everything else in this file.
     # "vault" overlays those specific fields from HashiCorp Vault's KV v2
     # engine after startup (see app/core/secrets.py) - enable for
@@ -149,8 +143,7 @@ def get_settings() -> Settings:
 
         provider = get_secrets_provider(settings_obj)
         settings_obj.SECRET_KEY = provider.get("SECRET_KEY", settings_obj.SECRET_KEY)
-        settings_obj.OPENAI_API_KEY = provider.get("OPENAI_API_KEY", settings_obj.OPENAI_API_KEY)
-        settings_obj.ANTHROPIC_API_KEY = provider.get("ANTHROPIC_API_KEY", settings_obj.ANTHROPIC_API_KEY)
+        settings_obj.GROQ_API_KEY = provider.get("GROQ_API_KEY", settings_obj.GROQ_API_KEY)
 
     return settings_obj
 

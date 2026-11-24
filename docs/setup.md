@@ -3,7 +3,7 @@
 ## Option A - Docker Compose (fastest path to something running)
 
 1. `cp .env.example .env` and fill in `SECRET_KEY` (generate one - see the
-   comment in `.env.example`) plus at least one LLM provider API key.
+   comment in `.env.example`) plus a Groq API key (`GROQ_API_KEY`).
 2. `docker compose up --build`
 3. Frontend: http://localhost:8080 - Backend API docs: http://localhost:8000/docs
 
@@ -19,7 +19,7 @@ always current when the container comes up.
 cd backend
 python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-cp .env.example .env   # fill in SECRET_KEY and an LLM API key
+cp .env.example .env   # fill in SECRET_KEY and GROQ_API_KEY
 alembic upgrade head
 uvicorn app.main:app --reload --port 8000
 ```
@@ -77,15 +77,14 @@ the same either way.
 ## Optional: Vault (secrets provider)
 
 Set `SECRETS_PROVIDER=vault`, `VAULT_ADDR`, and `VAULT_TOKEN` to source
-`SECRET_KEY`/`OPENAI_API_KEY`/`ANTHROPIC_API_KEY` from HashiCorp Vault's
+`SECRET_KEY`/`GROQ_API_KEY` from HashiCorp Vault's
 KV v2 engine instead of `.env`. Store them as a flat map at
 `VAULT_SECRET_PATH` (default `sqlcopilot`):
 
 ```bash
 vault kv put secret/sqlcopilot \
   SECRET_KEY="..." \
-  OPENAI_API_KEY="..." \
-  ANTHROPIC_API_KEY="..."
+  GROQ_API_KEY="..."
 ```
 
 ## Creating your first user

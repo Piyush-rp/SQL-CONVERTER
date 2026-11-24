@@ -21,7 +21,7 @@ backend/    FastAPI + LangGraph multi-agent pipeline + SQLAlchemy
   app/cache/        Schema cache + rate limiter (in-process or Redis-backed)
   app/core/         Config, security, logging, secrets, exceptions
   app/database/     Multi-engine connector, introspection, schema loading
-  app/llm/          Provider-agnostic LLM call (OpenAI/Anthropic)
+  app/llm/          LLM calls via Groq (OpenAI-compatible API)
   app/memory/       Multi-turn conversation memory + follow-up detection
   app/models/       SQLAlchemy ORM models (Copilot's own metadata DB)
   app/prompts/      Prompt templates, few-shot examples, prompt builder
@@ -71,10 +71,9 @@ introspected and executed through one dialect-agnostic code path
 (`app/database/`) via SQLAlchemy's Inspector - adding a 5th engine is a
 ~10-line addition to `connector.py`, not a parallel implementation.
 
-**LLM provider:** pluggable per-deployment or per-request between OpenAI
-and Anthropic (`app/llm/llm_factory.py`) - set `DEFAULT_LLM_PROVIDER` in
-`.env`, or pass `llm_provider` in the `/ask` request body to override it
-for a single question.
+**LLM provider:** Groq (`app/llm/llm_factory.py`), through its
+OpenAI-compatible API. Set `GROQ_API_KEY` (and optionally `GROQ_MODEL`,
+default `openai/gpt-oss-120b`) in `.env`.
 
 ## Quickstart
 

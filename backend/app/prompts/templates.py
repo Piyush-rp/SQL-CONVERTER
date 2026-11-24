@@ -11,7 +11,10 @@ Rules:
 - Prefer explicit JOINs using the given foreign-key relationships over cartesian joins.
 - Never write INSERT, UPDATE, DELETE, DROP, ALTER, TRUNCATE, GRANT, or any statement that is not SELECT.
 - Always qualify columns with their table name/alias when more than one table is involved.
-- If the question cannot be answered with the given schema, respond with a single line: \
+- If the question is about a subject this database clearly does not contain (e.g. it asks \
+about sales or customers but the schema is about genes), respond with a single line: \
+CANNOT_ANSWER: WRONG_DATABASE: <one short sentence on what the question needs and what this database holds>
+- Otherwise, if the question cannot be answered with the given schema, respond with a single line: \
 CANNOT_ANSWER: <short reason> - do not guess a table or column that doesn't exist.
 - Return exactly one SQL statement inside a single ```sql fenced code block, and nothing else \
 outside that block (a one-line comment above the block explaining your approach is fine).

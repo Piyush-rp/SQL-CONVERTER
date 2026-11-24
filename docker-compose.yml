@@ -43,11 +43,9 @@ services:
       DATABASE_URL: postgresql+psycopg2://copilot:${METADATA_DB_PASSWORD:-copilot_dev_password}@metadata-db:5432/copilot_metadata
       REDIS_URL: redis://redis:6379/0
       SECRET_KEY: ${SECRET_KEY:?Set SECRET_KEY in your .env before deploying}
-      DEFAULT_LLM_PROVIDER: ${DEFAULT_LLM_PROVIDER:-openai}
-      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
-      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o-mini}
-      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
-      ANTHROPIC_MODEL: ${ANTHROPIC_MODEL:-claude-sonnet-4-6}
+      DEFAULT_LLM_PROVIDER: groq
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      GROQ_MODEL: ${GROQ_MODEL:-openai/gpt-oss-120b}
       ALLOW_WRITE_QUERIES: ${ALLOW_WRITE_QUERIES:-false}
       SCHEMA_SEARCH_STRATEGY: ${SCHEMA_SEARCH_STRATEGY:-keyword}
       ENABLE_TOOL_CALLING: ${ENABLE_TOOL_CALLING:-false}

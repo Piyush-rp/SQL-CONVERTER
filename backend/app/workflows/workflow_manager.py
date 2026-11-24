@@ -39,6 +39,7 @@ class WorkflowManager:
         initial_state: WorkflowState = {
             "question": question,
             "connection_id": connection.id,
+            "connection_name": connection.name,
             "engine_name": connection.engine.value,
             "allow_write": settings.ALLOW_WRITE_QUERIES and not connection.read_only,
             "llm_config": llm_config or LLMConfig(),

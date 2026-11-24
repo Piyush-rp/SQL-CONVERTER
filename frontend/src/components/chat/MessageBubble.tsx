@@ -10,6 +10,7 @@ const STATUS_BADGE: Record<AskResponse["status"], { tone: "success" | "warning" 
   failed: { tone: "danger", label: "Failed" },
   rejected: { tone: "danger", label: "Blocked" },
   clarification_needed: { tone: "warning", label: "Needs clarification" },
+  wrong_database: { tone: "warning", label: "Wrong database" },
 };
 
 export function UserMessage({ question }: { question: string }) {
