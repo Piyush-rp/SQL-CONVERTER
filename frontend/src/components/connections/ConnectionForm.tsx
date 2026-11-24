@@ -23,7 +23,7 @@ export function ConnectionForm({
 }) {
   const [engine, setEngine] = useState<DBEngine>("postgresql");
   const [name, setName] = useState("");
-  const [host, setHost] = useState("localhost");
+  const [host, setHost] = useState("");
   const [port, setPort] = useState(ENGINE_DEFAULTS.postgresql.port);
   const [database, setDatabase] = useState("");
   const [username, setUsername] = useState("");
@@ -98,10 +98,20 @@ export function ConnectionForm({
             <>
               <div className="grid grid-cols-3 gap-3">
                 <div className="col-span-2">
-                  <Input label="Host" required value={host} onChange={(e) => setHost(e.target.value)} />
+                  <Input
+                    label="Host"
+                    required
+                    value={host}
+                    onChange={(e) => setHost(e.target.value)}
+                    placeholder="db.example.com or tunnel host"
+                  />
                 </div>
                 <Input label="Port" type="number" required value={port} onChange={(e) => setPort(Number(e.target.value))} />
               </div>
+              <p className="-mt-1.5 text-xs text-ink-500">
+                The server must reach this host. For a database on your own computer, expose it with a TCP tunnel
+                (e.g. ngrok, pinggy) and enter the tunnel's host and port - "localhost" refers to the server, not your PC.
+              </p>
               <Input label="Database name" required value={database} onChange={(e) => setDatabase(e.target.value)} />
               <div className="grid grid-cols-2 gap-3">
                 <Input label="Username" required value={username} onChange={(e) => setUsername(e.target.value)} />
