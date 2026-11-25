@@ -2,7 +2,7 @@
 Adversarial tests against the SQL security gate (app/validators/) - actively
 trying to break it with real injection techniques, rather than only testing
 the cases the implementation was designed around. This is NOT a substitute
-for an independent penetration test (see docs/roadmap.md item 1) - it's a
+for an independent penetration test - it's a
 self-review with the obvious attacks a determined user or a jailbroken LLM
 response might try, tightened based on what actually got through.
 """

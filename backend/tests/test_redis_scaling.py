@@ -1,8 +1,8 @@
 """
 Tests for the Redis-backed schema cache and rate limiter against a REAL
 Redis server (skipped automatically if one isn't reachable at REDIS_URL /
-localhost:6379) - this is what proves the multi-instance scaling story in
-docs/scaling.md is actually implemented, not just described.
+localhost:6379) - this is what proves the multi-instance scaling story is actually
+implemented, not just described.
 """
 from __future__ import annotations
 

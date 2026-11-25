@@ -1,7 +1,7 @@
 """
 Embedding-based schema search - an upgrade over the plain keyword-overlap
 narrowing in app.database.schema_loader.relevant_subset() for large
-schemas (see docs/roadmap.md item 12, now addressed).
+schemas.
 
 Why this matters beyond keyword matching: a question like "show me our
 clients in Germany" has zero token overlap with a table literally named

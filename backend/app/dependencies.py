@@ -1,6 +1,6 @@
 """FastAPI dependency-injection helpers: current user, role-based access,
 and rate limiting (backed by app.cache - in-process or Redis depending on
-config, see docs/scaling.md)."""
+config)."""
 from __future__ import annotations
 
 from fastapi import Depends, Header, Request

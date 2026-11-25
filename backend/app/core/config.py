@@ -67,7 +67,7 @@ class Settings(BaseSettings):
     #   works well for small-to-medium schemas.
     # "vector": TF-IDF + FAISS embedding search (app.vectorstore) - better
     #   recall on large schemas where the question's wording doesn't share
-    #   exact tokens with a relevant table's name (see docs/roadmap.md item 12).
+    #   exact tokens with a relevant table's name.
     SCHEMA_SEARCH_STRATEGY: str = "keyword"
 
     # --- Agentic tool-calling generation (app.tools) ---------------------------
@@ -83,8 +83,7 @@ class Settings(BaseSettings):
     # --- Redis (optional) -----------------------------------------------------
     # If set, the schema cache and rate limiter use Redis instead of an
     # in-process dict, so multiple backend replicas share one consistent
-    # view instead of each tracking its own (see docs/scaling.md). Leave
-    # unset for a single-instance deployment - everything still works,
+    # view instead of each tracking its own. Leave unset for a single-instance deployment - everything still works,
     # just without cross-instance consistency.
     REDIS_URL: str = ""
 
@@ -94,7 +93,7 @@ class Settings(BaseSettings):
     # "vault" overlays those specific fields from HashiCorp Vault's KV v2
     # engine after startup (see app/core/secrets.py) - enable for
     # deployments that centralize secrets instead of using env vars/.env
-    # files directly (see docs/roadmap.md item 3).
+    # files directly.
     SECRETS_PROVIDER: str = "env"
     VAULT_ADDR: str = ""
     VAULT_TOKEN: str = ""

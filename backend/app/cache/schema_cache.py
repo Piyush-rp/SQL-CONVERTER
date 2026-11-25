@@ -11,7 +11,7 @@ Two backends, same interface:
     settings.REDIS_URL is set (see schema_loader.py's factory) - this is
     what makes cache invalidation (schema refresh) actually consistent
     across a multi-instance deployment instead of only affecting whichever
-    replica handled that request (see docs/scaling.md item 1).
+    replica handled that request.
 """
 from __future__ import annotations
 

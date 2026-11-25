@@ -2,7 +2,7 @@
 Multi-turn conversation memory: lets a follow-up question like "and by
 region?" or "now just for last month" resolve against the previous
 turn's question/SQL, instead of every question being handled in total
-isolation (previously flagged as not-done in docs/roadmap.md item 12).
+isolation.
 
 Same in-process-vs-Redis pattern as app.cache: a session's turns live in
 whichever backend is configured, with a bounded turn count per session so
@@ -69,8 +69,7 @@ class InProcessConversationMemory:
 
 class RedisConversationMemory:
     """Redis-backed equivalent - a capped list per session, so multiple
-    backend replicas share the same conversation state (see docs/scaling.md;
-    the same rationale as RedisSchemaCache/RedisRateLimiter applies here)."""
+    backend replicas share the same conversation state."""
 
     _KEY_PREFIX = "sqlcopilot:memory:"
 

@@ -1,7 +1,7 @@
 """
 Rate limiter implementations, alongside the schema cache in this package
 since both are "shared, ephemeral, TTL'd state" with the identical
-in-process-vs-Redis tradeoff (see docs/scaling.md).
+in-process-vs-Redis tradeoff.
 """
 from __future__ import annotations
 
@@ -17,7 +17,7 @@ class RateLimiter:
     """Fixed-window-ish limiter per user id, in-process. Fine for a single
     instance / dev / small deployments; each replica in a multi-instance
     deployment would otherwise track its own independent window - see
-    RedisRateLimiter below and docs/scaling.md item 2."""
+    RedisRateLimiter below."""
 
     def __init__(self, limit_per_minute: int):
         self.limit = limit_per_minute

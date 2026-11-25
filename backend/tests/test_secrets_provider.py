@@ -6,7 +6,7 @@ against here (unlike Postgres/MySQL/Redis, which really were installed and
 tested live - see test_live_databases.py / test_redis_scaling.py). This
 proves the integration *logic* is correct; a live Vault round-trip still
 needs to be verified against your actual Vault deployment before relying
-on it (see docs/roadmap.md item 3).
+on it.
 """
 from __future__ import annotations
 

@@ -41,19 +41,6 @@ npm run dev
 Vite's dev server proxies `/api` to `http://localhost:8000` (see
 `vite.config.ts`), so the backend needs to already be running.
 
-## Try it immediately with demo data
-
-Don't have a database handy to test against? Generate one:
-
-```bash
-python3 scripts/seed_demo_data.py demo.sqlite
-```
-
-Then in the app, add a connection with engine `sqlite` and file path
-pointing at `demo.sqlite` (use the absolute path if running the backend in
-Docker - mount the file into the container, or run the backend locally
-for a quick try).
-
 ## Connecting to SQL Server
 
 `pyodbc` needs the Microsoft ODBC Driver installed on the machine/image
@@ -70,8 +57,7 @@ PostgreSQL, MySQL and SQLite need no extra system packages - their drivers
 ## Optional: Redis (multi-instance scaling)
 
 Set `REDIS_URL=redis://localhost:6379/0` (or your Redis host) to switch
-the schema cache and rate limiter to Redis-backed implementations - see
-`docs/scaling.md`. Leave it blank for a single instance; everything works
+the schema cache and rate limiter to Redis-backed implementations. Leave it blank for a single instance; everything works
 the same either way.
 
 ## Optional: Vault (secrets provider)
@@ -93,4 +79,4 @@ The **first** account registered via `POST /api/v1/auth/register` is
 automatically made an admin (see `app/auth/service.py`); every account
 after that defaults to the least-privileged `viewer` role. Promote other
 users to `admin`/`editor` directly in the `users` table until an admin UI
-exists (see `docs/roadmap.md`).
+exists.

@@ -2,7 +2,7 @@
 Pluggable secrets provider: environment variables (default) or HashiCorp
 Vault. This exists so SECRET_KEY / GROQ_API_KEY can
 live in a real secrets manager instead of a .env file, for deployments
-that require it (see docs/roadmap.md item 3) - without changing how
+that require it - without changing how
 anything else in the app reads `settings.*`.
 
 Only these three fields are ever sourced from Vault; everything else

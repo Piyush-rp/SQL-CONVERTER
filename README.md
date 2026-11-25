@@ -35,11 +35,8 @@ backend/    FastAPI + LangGraph multi-agent pipeline + SQLAlchemy
   app/workflows/    The LangGraph state machine wiring every agent together
   logs/             Rotating file logs (in addition to stdout)
   tests/            Unit/integration tests - run in-process, no server needed
-datasets/   Plain SQL seed data for the demo database (scripts/seed_demo_data.py)
 docker/     Shared Docker resources (nginx.conf, dev-mode compose overlay)
-docs/       Setup, scaling, load-testing results, and enterprise-readiness roadmap
-scripts/    seed_demo_data.py - generates a ready-to-query demo SQLite file
-tests/      Deployment SMOKE tests - hit a real, already-running instance over HTTP
+docs/       Setup guide
 ```
 
 **The pipeline** (`backend/app/workflows/sql_workflow.py`), one LangGraph
@@ -95,10 +92,10 @@ pip install -r requirements.txt
 pytest -v
 ```
 
-**146 tests.** Most (SQL validators, agent pipeline, HTTP API) need no
+**156 tests.** Most (SQL validators, agent pipeline, HTTP API) need no
 external services and run anywhere. A subset runs against **real,
 live Postgres, MySQL, and Redis** if reachable (auto-skipped otherwise) -
-see `docs/setup.md` for standing those up locally. 62 of the 146 are
+see `docs/setup.md` for standing those up locally. 62 of the 156 are
 adversarial security tests that actively try to break the SQL validator
 (stacked-query injection, comment-based evasion, filesystem/command escape
 hatches, privilege escalation) across all 4 database dialects. Others
@@ -121,8 +118,7 @@ mode, Alembic migrations, Prometheus metrics, and Docker deployment configs.
 
 **Not yet done** - an independent security audit/pentest, SSO/SAML, a
 *live* Vault/SQL-Server verification, and an actual `docker compose up`
-(never run here - no Docker daemon in this build environment). Full,
-current, honest status of every item: `docs/roadmap.md`.
+(never run here - no Docker daemon in this build environment).
 
 ## License
 
